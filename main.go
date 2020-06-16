@@ -8,6 +8,7 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -178,8 +179,17 @@ func doSqlUpdate(newFiles []string) {
 			log.Fatalf("[ERR] Get File Path err: %v, %v, %v", f, fPath, err)
 		}
 
-		cmd := exec.Command("cmd", "/C", fmt.Sprintf("%s -h%s -P%v -u%s --password=%s %s < %s",
-			dbConfig.MysqlBin, dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Pwd, dbConfig.Name, fPath))
+		var cmd *exec.Cmd
+		mysqlCmd := fmt.Sprintf("%s -h%s -P%v -u%s --password=%s %s < %s",
+			dbConfig.MysqlBin, dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Pwd, dbConfig.Name, fPath)
+		switch runtime.GOOS {
+		case "linux":
+			cmd = exec.Command("/bin/sh", "-c", mysqlCmd)
+		case "windows":
+			cmd = exec.Command("cmd", "/C", mysqlCmd)
+		default:
+			log.Fatalf("[ERROR] Unsupport OS: %+v\n", runtime.GOOS)
+		}
 
 		log.Printf("CMD: %v\n", cmd)
 		var out, stderr bytes.Buffer
